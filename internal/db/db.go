@@ -1,34 +1,48 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"os"
 
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 type DataBase struct {
-	Client *sqlx.DB
+	Client *mongo.Client
 }
 
 func NewDatabase() (*DataBase, error) {
 	connecttionString := fmt.Sprintf(
-		"host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
+		"mongodb://%s:%s@%s:%s/?maxPoolSize=%s&w=%s",
+		os.Getenv("DB_USERNAME"),
+		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USERNAME"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("SSL_MODE"),
+		os.Getenv("DB_POOL"),
+		os.Getenv("WRITE_CONCERN"),
 	)
 
-	dbConn, err := sqlx.Connect("postgres", connecttionString)
+	dbConn, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(connecttionString))
 
 	if err != nil {
 		return &DataBase{}, fmt.Errorf("db init failed: %w", err)
 	}
+
 	return &DataBase{
 		Client: dbConn,
 	}, nil
+}
+
+func (d *DataBase) PingDB() error {
+	logrus.Info("Pinging db")
+	if err := d.Client.Ping(context.Background(), readpref.Primary()); err != nil {
+		logrus.Error("Ping failed: ", err)
+		return err
+	}
+	logrus.Info("Ping Successfull")
+	return nil
 }
