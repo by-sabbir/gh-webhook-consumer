@@ -27,6 +27,9 @@ func NewHandler() *Handler {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
+	h.Router.Use(LogMiddlewire)
+	h.Router.Use(JSONMiddlewire)
+
 	return h
 }
 
