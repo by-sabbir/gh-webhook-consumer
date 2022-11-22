@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -12,12 +13,15 @@ import (
 )
 
 type Handler struct {
-	Router *mux.Router
-	Server *http.Server
+	Router  *mux.Router
+	Service EventServices
+	Server  *http.Server
 }
 
-func NewHandler() *Handler {
-	h := &Handler{}
+func NewHandler(svc EventServices) *Handler {
+	h := &Handler{
+		Service: svc,
+	}
 	h.Router = mux.NewRouter()
 	h.mapRoutes()
 
@@ -34,9 +38,15 @@ func NewHandler() *Handler {
 }
 
 func (h *Handler) mapRoutes() {
-	h.Router.HandleFunc("/webhook", h.GetHooks).Methods("POST")
+	h.Router.HandleFunc("/webhook", h.GetIssues).Methods("POST")
+	h.Router.HandleFunc("/healthz", healthCheck).Methods("GET")
 }
 
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "ok",
+	})
+}
 func (h *Handler) Serve() error {
 	go func() {
 		if err := h.Server.ListenAndServe(); err != nil {
