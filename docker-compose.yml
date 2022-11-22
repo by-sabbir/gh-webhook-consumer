@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_DATABASE=github
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=Password@100
+    volumes:
+      # seeding scripts
+      - ./init-db:/docker-entrypoint-initdb.d
+      # named volumes
+      - mongodb:/data/db
+      - mongoconfig:/data/configdb
+
+  api:
+    build: .
+    image: registry.sabbir.dev/git-webhook
+    environment:
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_USERNAME=admin
+      - DB_PASSWORD=Password%40100
+      - DB_NAME=github
+      - DB_POOL=50
+      - WRITE_CONCERN=majority
+    ports:
+      - 3000:3000
+
+volumes:
+  mongodb:
+  mongoconfig:
